@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+.venv/
+venv/
+.env
+
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+.DS_Store
+
+# Note: eval/cassettes/ (recorded API responses CI replays by default) is
+# intentionally tracked, not ignored. Review new cassettes before committing
+# them — they can contain request metadata.
