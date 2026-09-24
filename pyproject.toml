@@ -11,9 +11,9 @@ requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Akil Pat", email = "akilpat.dev@gmail.com" }]
 dependencies = [
-    # TODO: pin exact versions once agent.py is implemented and smoke-tested
-    # (Tool Runner is a beta SDK surface — pin tightly, not with a floor).
-    "anthropic>=0.40.0",
+    # Pinned exactly, not a floor: Tool Runner (client.beta.messages.tool_runner)
+    # is a beta SDK surface and can change shape between releases.
+    "anthropic==1.8.0",
     "typer>=0.15.0",
     "unidiff>=0.7.5",
     "fastapi>=0.115.0",
