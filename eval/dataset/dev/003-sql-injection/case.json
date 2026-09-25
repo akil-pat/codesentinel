@@ -1,0 +1,13 @@
+{
+  "id": "dev-003-sql-injection",
+  "description": "Replaces a parameterized query with f-string interpolation of unsanitized input.",
+  "diff_file": "diff.patch",
+  "repo_dir": "repo",
+  "expected_findings": [
+    {
+      "file": "src/db.py",
+      "line": 2,
+      "description": "find_user now builds the SQL query via an f-string with unsanitized username input, introducing a SQL injection vulnerability; the previous parameterized query (execute with a ? placeholder) prevented this."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "test-002-logic-operator-bug",
+  "description": "Changes `and` to `or` in a range check, breaking the validation logic.",
+  "diff_file": "diff.patch",
+  "repo_dir": "repo",
+  "expected_findings": [
+    {
+      "file": "src/validation.py",
+      "line": 2,
+      "description": "is_valid_range now returns True whenever either condition holds instead of both, so it incorrectly validates values outside [low, high] (e.g. any value <= high passes regardless of the lower bound)."
+    }
+  ]
+}

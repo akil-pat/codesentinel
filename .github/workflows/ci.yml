@@ -29,4 +29,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
-      - run: python eval/run_eval.py --mode replay
+      # -m, not `python eval/run_eval.py`: the latter puts eval/ itself on
+      # sys.path[0] instead of the repo root, breaking `from eval.scorer
+      # import ...` inside run_eval.py.
+      - run: python -m eval.run_eval --mode replay

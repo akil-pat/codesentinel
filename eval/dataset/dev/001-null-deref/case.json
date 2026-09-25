@@ -1,0 +1,13 @@
+{
+  "id": "dev-001-null-deref",
+  "description": "Removes a None check before attribute access, reintroducing a null-dereference bug.",
+  "diff_file": "diff.patch",
+  "repo_dir": "repo",
+  "expected_findings": [
+    {
+      "file": "src/handler.py",
+      "line": 2,
+      "description": "get_email no longer checks that user is not None before accessing user.email; the removed guard previously handled this, so a None user will now raise AttributeError instead of returning None."
+    }
+  ]
+}

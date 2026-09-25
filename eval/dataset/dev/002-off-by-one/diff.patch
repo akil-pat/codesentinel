@@ -1,0 +1,10 @@
+diff --git a/src/slicing.py b/src/slicing.py
+index 0317ade..2ee8a0e 100644
+--- a/src/slicing.py
++++ b/src/slicing.py
+@@ -3,4 +3,4 @@ def last_n_items(items, n):
+ 
+ 
+ def first_n_items(items, n):
+-    return items[0:n]
++    return items[0:n - 1]

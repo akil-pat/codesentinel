@@ -1,0 +1,9 @@
+diff --git a/src/handler.py b/src/handler.py
+index f76647d..dff47b0 100644
+--- a/src/handler.py
++++ b/src/handler.py
+@@ -1,4 +1,2 @@
+ def get_email(user):
+-    if user is None:
+-        return None
+     return user.email

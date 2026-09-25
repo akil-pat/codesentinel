@@ -36,6 +36,10 @@ codesentinel = "codesentinel.cli:app"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Deliberately buggy fixture repos, not maintained project code — linting
+# them would either fight the intentional bugs or mask real issues in
+# actual source under noise from fixtures.
+extend-exclude = ["eval/dataset/*/repo"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/codesentinel"]
