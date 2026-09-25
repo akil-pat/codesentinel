@@ -147,6 +147,23 @@ def run_case(
             return CaseRunOutcome(
                 case_id=case.id, score=None, error=str(exc), cassette_warning=cassette_warning
             )
+        except Exception as exc:  # noqa: BLE001 - deliberately broad, see comment below
+            # Confirmed by actually running this with no cassettes/no API
+            # key present: the failure surfaces as anthropic.APIConnectionError
+            # (VCR blocking a replay-mode request) or a raw TypeError
+            # (missing credentials) or similar — never ReviewGenerationError,
+            # since that's raised by run_review's own internal logic, not
+            # by the transport underneath it. Any of these must still count
+            # as "no review produced" for this one case, not crash the
+            # whole eval run and prevent eval-results.json from being
+            # written at all. Narrowing this back to ReviewGenerationError
+            # would silently reintroduce exactly that crash.
+            return CaseRunOutcome(
+                case_id=case.id,
+                score=None,
+                error=f"{type(exc).__name__}: {exc}",
+                cassette_warning=cassette_warning,
+            )
         score = score_case(result.review.findings, case.expected_findings)
         return CaseRunOutcome(case_id=case.id, score=score, cassette_warning=cassette_warning)
 
@@ -240,6 +257,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Excluded (no review produced): {', '.join(agg['excluded_case_ids'])}", file=sys.stderr)
     for warning in report["cassette_warnings"]:
         print(f"Warning: {warning}", file=sys.stderr)
+
+    # A partial exclusion (some cases scored, some didn't) is by design
+    # not a failure — that's the whole point of excluding rather than
+    # zero-filling. A total washout is a different thing: there is no
+    # score at all (precision/recall/f1 are all None), so reporting exit
+    # 0 here would claim a successful measurement that didn't happen.
+    if cases and agg["scored_case_count"] == 0:
+        print("Error: every case failed or was excluded — no score was produced.", file=sys.stderr)
+        return 1
 
     if args.strict_cassettes and report["cassette_warnings"]:
         return 1

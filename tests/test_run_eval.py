@@ -193,7 +193,15 @@ def test_main_writes_report_and_returns_zero(tmp_path, monkeypatch):
     assert report["aggregate"]["scored_case_count"] == 3
 
 
-def test_main_excludes_generation_errors_from_aggregate(tmp_path, monkeypatch):
+def test_main_total_washout_fails_the_run(tmp_path, monkeypatch):
+    # Confirmed against a real run (no cassettes, no API key) before this
+    # test was written: every case failing used to crash main() with an
+    # unhandled TypeError and never write eval-results.json at all. Fixed
+    # in run_case's invoke() to catch any exception, not just
+    # ReviewGenerationError — this test guards that fix. A run where
+    # EVERY case fails or is excluded produces no score at all
+    # (precision/recall/f1 are all None), so exit 0 here would falsely
+    # claim a successful measurement.
     def raise_error(*args, **kwargs):
         raise ReviewGenerationError("boom")
 
@@ -202,14 +210,55 @@ def test_main_excludes_generation_errors_from_aggregate(tmp_path, monkeypatch):
 
     exit_code = main(["--split", "dev", "--mode", "live", "--output", str(output_path)])
 
-    assert exit_code == 0  # generation errors alone don't fail the run
-    report = json.loads(output_path.read_text())
+    assert exit_code == 1
+    report = json.loads(output_path.read_text())  # still written, not lost to a crash
     assert report["aggregate"]["scored_case_count"] == 0
     assert set(report["aggregate"]["excluded_case_ids"]) == {
         "dev-001-null-deref",
         "dev-002-off-by-one",
         "dev-003-sql-injection",
     }
+
+
+def test_main_partial_exclusion_still_succeeds(tmp_path, monkeypatch):
+    # The opposite of the total-washout case above: SOME cases scoring
+    # and some being excluded is the normal, by-design behavior this
+    # whole exclusion mechanism exists for — it must not fail the run.
+    review = Review(summary="ok", findings=[])
+    calls = {"n": 0}
+
+    def flaky_run_review(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise ReviewGenerationError("boom")
+        return RunResult(review=review, analysis_text="x", iteration_count=1)
+
+    monkeypatch.setattr(run_eval_module, "run_review", flaky_run_review)
+    output_path = tmp_path / "results.json"
+
+    exit_code = main(["--split", "dev", "--mode", "live", "--output", str(output_path)])
+
+    assert exit_code == 0
+    report = json.loads(output_path.read_text())
+    assert report["aggregate"]["scored_case_count"] == 2
+    assert len(report["aggregate"]["excluded_case_ids"]) == 1
+
+
+def test_run_case_treats_unexpected_exceptions_as_excluded_not_a_crash(repo_case, monkeypatch):
+    # Reproduces, at the run_case level, the exact real failure this
+    # section is about: something other than ReviewGenerationError (a
+    # raw connection/auth/transport error, in practice) must still come
+    # back as an excluded outcome, not propagate.
+    def raise_unexpected(*args, **kwargs):
+        raise TypeError("Could not resolve authentication method")
+
+    monkeypatch.setattr(run_eval_module, "run_review", raise_unexpected)
+
+    outcome = run_case(repo_case, mode="live")
+
+    assert outcome.score is None
+    assert "TypeError" in outcome.error
+    assert "authentication" in outcome.error
 
 
 def test_main_strict_cassettes_fails_on_stale_cassette(tmp_path, monkeypatch):

@@ -17,25 +17,45 @@ jobs:
       - run: ruff check .
       - run: pytest
 
-  # Eval job replays recorded API responses (eval/cassettes/) by default —
-  # this measures scorer/prompt consistency against history, not live model
-  # drift. A separate weekly workflow re-runs against the live API.
+  # Replays recorded API responses (eval/cassettes/) — measures whether
+  # the scorer/prompt still agree with a fixed recorded history, NOT live
+  # model drift (see eval/dataset/RUBRIC.md and eval/run_eval.py's module
+  # docstring for that distinction). A separate weekly workflow
+  # (eval-live.yml) re-runs against the live API instead.
   eval:
     runs-on: ubuntu-latest
     needs: lint-and-test
-    # No cassettes have been recorded yet (no live API credential was
-    # available while building this) — this job WILL fail until someone
-    # with API access runs `python -m eval.run_eval --mode record` once.
-    # continue-on-error keeps that visible without blocking merges in the
-    # meantime; remove it once real cassettes exist under eval/cassettes/.
-    continue-on-error: true
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
-      # -m, not `python eval/run_eval.py`: the latter puts eval/ itself on
-      # sys.path[0] instead of the repo root, breaking `from eval.scorer
-      # import ...` inside run_eval.py.
-      - run: python -m eval.run_eval --mode replay --strict-cassettes
+      # No cassettes have been recorded yet — no live API credential was
+      # available while building this project. continue-on-error keeps
+      # that visible without blocking merges until someone with API
+      # access runs `python -m eval.run_eval --mode record` once. Remove
+      # this once eval/cassettes/ has real recordings.
+      - name: Run eval (replay mode)
+        continue-on-error: true
+        run: python -m eval.run_eval --mode replay --split test --strict-cassettes
+      # Always regenerate the badge, even if the eval step above failed —
+      # a "not yet measured" badge is exactly the correct output of a
+      # failed/empty eval run, not something to skip.
+      - name: Generate badge
+        if: always()
+        run: python -m eval.generate_badge
+      # Requires the repo's Settings → Actions → General → Workflow
+      # permissions to be set to "Read and write permissions" — without
+      # that, GITHUB_TOKEN can't push and this step fails (harmlessly;
+      # it doesn't block the job, see continue-on-error above).
+      - name: Commit updated badge
+        if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          git config user.name "codesentinel-bot"
+          git config user.email "actions@github.com"
+          git add badges/eval-badge.json
+          git diff --cached --quiet || git commit -m "Update eval badge [skip ci]"
+          git push
