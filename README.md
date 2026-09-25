@@ -163,8 +163,13 @@ docker run -p 8000:8000 \
 
 ## Development
 
+Requires Python 3.11+. Check with `python3 --version` first — on macOS,
+if that's older, `brew install python@3.12` and use
+`/opt/homebrew/bin/python3.12` in the command below instead of `python3`
+(the system Python on a stock Mac is commonly 3.9, which is too old).
+
 ```bash
-python3.11 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
 ruff check .
@@ -188,6 +193,32 @@ record time — `--mode replay` (CI's default) warns, or with
 `--strict-cassettes`, fails if a cassette's hash no longer matches the
 current source, so a stale cassette can't silently score yesterday's
 prompt as today's.
+
+## Known limitations
+
+- **Eval dataset size and scope** — see
+  [`eval/dataset/RUBRIC.md`](eval/dataset/RUBRIC.md) in full; in short,
+  it's a 6-case starter set of synthetic single-file diffs, not the
+  25-40 real-PR-sourced set a "measured" claim would ideally rest on.
+- **Token budget is uncalibrated against live usage** — `agent.py` uses
+  `max_tokens=16000` (non-streaming) for both the investigation loop and
+  the restate call, which is the value the Claude API's own guidance
+  recommends for non-streaming requests. It hasn't been calibrated
+  against a real, complex, multi-file diff, since no live API credential
+  was available while building this — a large investigation (many tool
+  calls, extended thinking) could in principle hit that ceiling before
+  concluding, which `run_review` would correctly surface as a
+  `ReviewGenerationError` rather than silently truncating, but this
+  hasn't been observed and tuned against reality yet.
+- **One summary comment, not inline per-line reviews** — the webhook
+  posts a single PR comment listing all findings, not GitHub's formal
+  per-line review-comment API, which needs diff-position math out of
+  scope here.
+- **No multi-file-diff reasoning tested** — every eval case touches
+  exactly one file; cross-file reasoning (e.g. "this change to `a.py`
+  breaks an assumption in `b.py`") is something the agent's tools
+  support in principle (`grep_repo` can search the whole repo) but isn't
+  exercised by anything in the eval set yet.
 
 ## License
 

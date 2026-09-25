@@ -61,7 +61,7 @@ def main(argv: list[str] | None = None) -> int:
     badge = build_badge(report)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(badge, indent=2))
+    args.output.write_text(json.dumps(badge, indent=2) + "\n")
     print(f"Wrote {args.output}: {badge['message']}")
     return 0
 

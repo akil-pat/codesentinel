@@ -197,3 +197,44 @@ def test_review_defaults_allow_tests_to_false(diff_file, repo_dir, monkeypatch):
     runner.invoke(cli_module.app, ["review", str(diff_file), "--repo", str(repo_dir)])
 
     assert captured["config"].allow_test_execution is False
+
+
+def test_review_reads_model_from_codesentinel_model_env_var(diff_file, repo_dir, monkeypatch):
+    # .env.example documents CODESENTINEL_MODEL as a general setting (it's
+    # not scoped to "webhook service only" there), so the CLI needs to
+    # actually honor it — this was previously silently ignored by the CLI
+    # path (only webhooks.py read it), a real drift caught in review.
+    captured = {}
+
+    def capture_model(parsed_diff, config, **kwargs):
+        captured["model"] = kwargs.get("model")
+        return RunResult(
+            review=Review(summary="ok", findings=[]), analysis_text="x", iteration_count=1
+        )
+
+    monkeypatch.setattr(cli_module, "run_review", capture_model)
+    monkeypatch.setenv("CODESENTINEL_MODEL", "claude-sonnet-5")
+
+    runner.invoke(cli_module.app, ["review", str(diff_file), "--repo", str(repo_dir)])
+
+    assert captured["model"] == "claude-sonnet-5"
+
+
+def test_review_model_flag_overrides_env_var(diff_file, repo_dir, monkeypatch):
+    captured = {}
+
+    def capture_model(parsed_diff, config, **kwargs):
+        captured["model"] = kwargs.get("model")
+        return RunResult(
+            review=Review(summary="ok", findings=[]), analysis_text="x", iteration_count=1
+        )
+
+    monkeypatch.setattr(cli_module, "run_review", capture_model)
+    monkeypatch.setenv("CODESENTINEL_MODEL", "claude-sonnet-5")
+
+    runner.invoke(
+        cli_module.app,
+        ["review", str(diff_file), "--repo", str(repo_dir), "--model", "claude-opus-5"],
+    )
+
+    assert captured["model"] == "claude-opus-5"

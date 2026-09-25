@@ -49,7 +49,14 @@ def review(
             "you trust — running tests means running that repo's code.",
         ),
     ] = False,
-    model: Annotated[str, typer.Option("--model", help="Claude model to use.")] = DEFAULT_MODEL,
+    model: Annotated[
+        str,
+        typer.Option(
+            "--model",
+            envvar="CODESENTINEL_MODEL",
+            help="Claude model to use. Also settable via CODESENTINEL_MODEL.",
+        ),
+    ] = DEFAULT_MODEL,
     json_output: Annotated[
         bool, typer.Option("--json", help="Print the review as JSON instead of human-readable text.")
     ] = False,
