@@ -1,0 +1,13 @@
+{
+  "id": "test-001-resource-leak",
+  "description": "Replaces a `with open(...)` context manager with a bare open() call, leaking the file handle.",
+  "diff_file": "diff.patch",
+  "repo_dir": "repo",
+  "expected_findings": [
+    {
+      "file": "src/config.py",
+      "line": 2,
+      "description": "read_config opens the file without a context manager or explicit close, leaking the file handle; the previous `with` block ensured it was always closed."
+    }
+  ]
+}

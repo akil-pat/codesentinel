@@ -1,0 +1,13 @@
+{
+  "id": "dev-002-off-by-one",
+  "description": "Introduces an off-by-one error in a slice upper bound.",
+  "diff_file": "diff.patch",
+  "repo_dir": "repo",
+  "expected_findings": [
+    {
+      "file": "src/slicing.py",
+      "line": 6,
+      "description": "first_n_items now returns n-1 items instead of n because of the off-by-one in the slice upper bound (items[0:n - 1] instead of items[0:n])."
+    }
+  ]
+}
